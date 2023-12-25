@@ -77,4 +77,27 @@ class TransactionTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonCount(3,'data');
     }
+    public function testInsufficientCreditTransaction()
+    {
+        $user = User::factory()->createOne();
+        $account = Account::factory()
+            ->state(new Sequence(
+                fn (Sequence $sequence) => ['user_id' => $user->id],
+            ))->createOne();
+        $response = $this->actingAs($user)->postJson(route('transaction.store'),[
+            'account_id' => $account->id,
+            'type' => 'credit',
+            'amount' => 10000,
+        ]);
+        $response = $this->actingAs($user)->postJson(route('transaction.store'),[
+            'account_id' => $account->id,
+            'type' => 'debit',
+            'amount' => 20000,
+        ]);
+        $response->assertStatus(401);
+        $this->assertDatabaseHas('accounts',[
+            'id' => $account->id,
+            'balance' => 10000,
+        ]);
+    }
 }

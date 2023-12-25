@@ -22,13 +22,14 @@ class TransactionController extends Controller
 
     public function store(TransactionRequest $request)
     {
+
+        $account = Account::find($request->get('account_id'));
+        abort_if($account->user_id != auth()->user()->id,401);
+
         $lock = Cache::lock($request->get('account_id'), 10);
 
         try {
             $lock->block(5);
-
-            $account = Account::find($request->get('account_id'));
-            abort_if($account->user_id != auth()->user()->id,401);
 
             if($request->get('type') == 'debit'){
                 throw_if($account->balance < $request->get('amount'),InsufficientCreditException::class);
